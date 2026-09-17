@@ -1,5 +1,6 @@
 import HomeNav from '@/components/home-nav'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import LocalSignInHint from '@/components/local-sign-in-hint'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTranslations } from 'next-intl'
 
 export default function VerifyRequestPage() {
@@ -9,11 +10,14 @@ export default function VerifyRequestPage() {
     <main className="doc-grid flex min-h-screen items-center justify-center bg-canvas px-4 py-16">
       <HomeNav />
       <Card className="w-full max-w-md bg-surface-raised shadow-md">
-        <CardHeader className="items-center py-8 text-center">
+        <CardHeader className="items-start py-8 text-left">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">doc workspace</p>
           <CardTitle className="text-2xl">{t('title')}</CardTitle>
           <CardDescription>{t('subTitle')}</CardDescription>
         </CardHeader>
+        <CardContent>
+          <LocalSignInHint />
+        </CardContent>
       </Card>
     </main>
   )

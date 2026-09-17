@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 // import { Link } from '@/i18n/routing'
 import HomeNav from '@/components/home-nav'
+import LocalSignInHint from '@/components/local-sign-in-hint'
 import { useTranslations } from 'next-intl'
 
 export default function SignInPage() {
@@ -98,7 +99,7 @@ export default function SignInPage() {
     <main className="doc-grid flex min-h-screen items-center justify-center bg-canvas px-4 py-16">
       <HomeNav />
       <Card className="w-full max-w-md bg-surface-raised shadow-md">
-        <CardHeader className="items-center pb-2 text-center">
+        <CardHeader className="items-start pb-2 text-left">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">doc workspace</p>
           <CardTitle className="text-2xl">{t('title')}</CardTitle>
           <CardDescription>
@@ -170,6 +171,8 @@ export default function SignInPage() {
               </Button>
             </form>
           )}
+
+          <LocalSignInHint email={email.trim() || undefined} />
 
           {authError && (
             <p
