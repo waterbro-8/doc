@@ -12,11 +12,28 @@ describe('local auth guidance', () => {
     ).toEqual({ enabled: false, mailpitUrl: null })
   })
 
-  test('enables outside production when Mailpit is configured', () => {
+  test('enables outside production on loopback Mailpit by default', () => {
+    expect(localAuthGuidance({ NODE_ENV: 'development' })).toEqual({
+      enabled: true,
+      mailpitUrl: 'http://localhost:8025',
+    })
+  })
+
+  test('uses an explicit loopback Mailpit URL', () => {
     expect(localAuthGuidance({ NODE_ENV: 'development', DOC_MAILPIT_URL: 'http://127.0.0.1:8025' })).toEqual({
       enabled: true,
       mailpitUrl: 'http://127.0.0.1:8025',
     })
+  })
+
+  test('can be opted out outside production', () => {
+    expect(
+      localAuthGuidance({
+        NODE_ENV: 'development',
+        DOC_LOCAL_AUTH_HINT: '0',
+        DOC_MAILPIT_URL: 'http://localhost:8025',
+      })
+    ).toEqual({ enabled: false, mailpitUrl: null })
   })
 
   test('does not enable assist against a non-loopback inbox', () => {

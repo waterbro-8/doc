@@ -18,13 +18,13 @@ function isLoopbackUrl(value: string) {
 
 export function localAuthGuidance(env: AuthEnvironment = process.env): LocalAuthGuidance {
   const production = env.NODE_ENV === 'production'
-  const forced = env.DOC_LOCAL_AUTH_HINT === '1'
+  const disabled = env.DOC_LOCAL_AUTH_HINT === '0'
   const mailpit = env.DOC_MAILPIT_URL?.trim() || ''
-  if (production) {
+  if (production || disabled) {
     return { enabled: false, mailpitUrl: null }
   }
-  const mailpitUrl = mailpit || (forced ? DEFAULT_MAILPIT_URL : '')
-  const enabled = Boolean(mailpitUrl) && isLoopbackUrl(mailpitUrl)
+  const mailpitUrl = mailpit || DEFAULT_MAILPIT_URL
+  const enabled = isLoopbackUrl(mailpitUrl)
   return {
     enabled,
     mailpitUrl: enabled ? mailpitUrl : null,

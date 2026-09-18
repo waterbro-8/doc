@@ -99,7 +99,7 @@ export default function SignInPage() {
     <main className="doc-grid flex min-h-screen items-center justify-center bg-canvas px-4 py-16">
       <HomeNav />
       <Card className="w-full max-w-md bg-surface-raised shadow-md">
-        <CardHeader className="items-start pb-2 text-left">
+        <CardHeader className="items-center pb-2 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">doc workspace</p>
           <CardTitle className="text-2xl">{t('title')}</CardTitle>
           <CardDescription>
