@@ -10,7 +10,6 @@ import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 // import { Link } from '@/i18n/routing'
 import HomeNav from '@/components/home-nav'
-import LocalSignInHint from '@/components/local-sign-in-hint'
 import { useTranslations } from 'next-intl'
 
 export default function SignInPage() {
@@ -171,8 +170,6 @@ export default function SignInPage() {
               </Button>
             </form>
           )}
-
-          <LocalSignInHint email={email.trim() || undefined} />
 
           {authError && (
             <p
