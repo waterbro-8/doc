@@ -11,6 +11,7 @@ export async function PATCH(request: Request, { params }: { params: RouteParams<
   }
 
   try {
+    const { publishId } = await resolveRouteParams(params)
     const body = await request.json()
     const { status, reason } = body
 
@@ -20,7 +21,7 @@ export async function PATCH(request: Request, { params }: { params: RouteParams<
 
     const current = await db.pubDoc.findUnique({
       where: {
-        publishId: params.publishId,
+        publishId,
       },
       select: {
         publishId: true,
@@ -42,7 +43,7 @@ export async function PATCH(request: Request, { params }: { params: RouteParams<
 
     const data = await db.pubDoc.update({
       where: {
-        publishId: params.publishId,
+        publishId,
       },
       data: {
         status: status as PubDocStatusValue,

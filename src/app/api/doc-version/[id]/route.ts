@@ -9,7 +9,8 @@ export async function GET(request: Request, { params }: { params: RouteParams<{ 
   if (user == null) return Response.json(genUnAuthData())
 
   try {
-    const version = await getDocVersionDetail(params.id, user.id || '')
+    const { id } = await resolveRouteParams(params)
+    const version = await getDocVersionDetail(id, user.id || '')
     if (version == null) {
       return Response.json(genErrorData('Doc version not found'))
     }

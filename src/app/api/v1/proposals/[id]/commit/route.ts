@@ -10,8 +10,9 @@ export async function POST(request: Request, { params }: { params: RouteParams<{
   const requestId = apiRequestId(request)
   try {
     const principal = await authenticatePersonalAccessToken(request, 'documents:write')
+    const { id } = await resolveRouteParams(params)
     const service = getProposalService()
-    const result = await service.commitProposal(principal.userId, params.id)
+    const result = await service.commitProposal(principal.userId, id)
     return apiSuccess(result, { requestId })
   } catch (error) {
     return apiError(error, requestId)

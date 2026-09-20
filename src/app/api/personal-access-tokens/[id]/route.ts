@@ -16,7 +16,8 @@ export async function DELETE(request: Request, { params }: { params: RouteParams
     const userId = await requireSessionUserId()
     requireSameOrigin(request)
 
-    const parsedId = tokenIdSchema.safeParse(params.id)
+    const { id } = await resolveRouteParams(params)
+    const parsedId = tokenIdSchema.safeParse(id)
     if (!parsedId.success) {
       throw new PersonalAccessTokenApiError(404, 'not_found', 'Personal access token not found')
     }

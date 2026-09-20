@@ -17,7 +17,8 @@ export async function PATCH(request: Request, { params }: { params: RouteParams<
       return Response.json(genErrorData('参数错误'))
     }
 
-    const data = await updateAdminUserRole(params.id, isAdmin)
+    const { id } = await resolveRouteParams(params)
+    const data = await updateAdminUserRole(id, isAdmin)
     return Response.json(genSuccessData(data))
   } catch (error) {
     return Response.json(genErrorData(error instanceof Error ? error.message : '操作失败'))

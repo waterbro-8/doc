@@ -11,10 +11,11 @@ export async function POST(request: Request, { params }: { params: RouteParams<{
   const requestId = apiRequestId(request)
   try {
     const principal = await authenticatePersonalAccessToken(request, 'documents:write')
+    const { id } = await resolveRouteParams(params)
     const body = await readApiJson(request)
     const input = reviewProposalSchema.parse(body)
     const service = getProposalService()
-    const result = await service.reviewProposal(principal.userId, params.id, input)
+    const result = await service.reviewProposal(principal.userId, id, input)
     return apiSuccess(result, { requestId })
   } catch (error) {
     return apiError(error, requestId)
