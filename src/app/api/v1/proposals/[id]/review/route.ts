@@ -2,11 +2,12 @@ import { authenticatePersonalAccessToken } from '@/lib/personal-access-token'
 import { apiError, apiRequestId, apiSuccess, readApiJson } from '@/lib/api-v1'
 import { reviewProposalSchema } from '@/lib/api-v1-proposals'
 import { getProposalService } from '@/lib/api-v1-proposals-instance'
+import { resolveRouteParams, type RouteParams } from '@/lib/route-params'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: RouteParams<{ id: string }> }) {
   const requestId = apiRequestId(request)
   try {
     const principal = await authenticatePersonalAccessToken(request, 'documents:write')

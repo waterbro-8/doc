@@ -1,8 +1,9 @@
 import { updateAdminUserRole } from '@/lib/admin-data'
 import { requireAdminUser } from '@/lib/admin'
 import { genErrorData, genSuccessData, genUnAuthData } from '@/app/api/utils/gen-res-data'
+import { resolveRouteParams, type RouteParams } from '@/lib/route-params'
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: RouteParams<{ id: string }> }) {
   const user = await requireAdminUser()
   if (user == null) {
     return Response.json(genUnAuthData())

@@ -2,8 +2,9 @@ import { db } from '@/db/db'
 import { requireAdminUser } from '@/lib/admin'
 import { canTransitionPubDocStatus, PUB_DOC_STATUS, PubDocStatusValue } from '@/lib/pub-doc-status'
 import { genErrorData, genSuccessData, genUnAuthData } from '@/app/api/utils/gen-res-data'
+import { resolveRouteParams, type RouteParams } from '@/lib/route-params'
 
-export async function PATCH(request: Request, { params }: { params: { publishId: string } }) {
+export async function PATCH(request: Request, { params }: { params: RouteParams<{ publishId: string }> }) {
   const user = await requireAdminUser()
   if (user == null) {
     return Response.json(genUnAuthData())
