@@ -217,6 +217,25 @@ export function createApiClient({
         ifMatch: options.force ? '*' : options.ifMatch,
       })
     },
+    listVersions(id, options = {}) {
+      const query = new URLSearchParams()
+      if (options.limit) query.set('limit', String(options.limit))
+      if (options.cursor) query.set('cursor', options.cursor)
+      const suffix = query.size > 0 ? `?${query}` : ''
+      return request(`${DOCUMENTS_PATH}/${encodeURIComponent(id)}/versions${suffix}`)
+    },
+    getVersion(id, versionId) {
+      return request(`${DOCUMENTS_PATH}/${encodeURIComponent(id)}/versions/${encodeURIComponent(versionId)}`)
+    },
+    listComments(id, options = {}) {
+      const query = new URLSearchParams()
+      if (options.includeResolved) query.set('include', 'resolved')
+      const suffix = query.size > 0 ? `?${query}` : ''
+      return request(`${DOCUMENTS_PATH}/${encodeURIComponent(id)}/comments${suffix}`)
+    },
+    createComment(id, data) {
+      return request(`${DOCUMENTS_PATH}/${encodeURIComponent(id)}/comments`, { method: 'POST', body: data })
+    },
     exportBundle() {
       return request(`${DOCUMENTS_PATH}/export`)
     },

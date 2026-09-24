@@ -48,6 +48,7 @@ export async function getShareRelationAccess(
         and relation."userId" = $2
         and relation."authorId" = doc."userId"
         and doc."isDeleted" = false
+        and (relation."expiresAt" is null or relation."expiresAt" > now())
       limit 1
     `
     const getShareRelationValues = [docId, userId]

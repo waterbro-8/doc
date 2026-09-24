@@ -41,6 +41,7 @@ export async function getShareRelations() {
   const shareRelations = await db.shareRelation.findMany({
     where: {
       userId: user.id,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
     include: {
       doc: {

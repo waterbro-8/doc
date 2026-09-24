@@ -41,6 +41,7 @@ model Doc {
   shareRelations ShareRelation[]
   pubDoc         PubDoc[]
   versions       DocVersion[]
+  comments       DocComment[]
 
   @@index([userId, parentId, sortOrder])
 }
@@ -103,6 +104,7 @@ model User {
   pubDocs              PubDoc[]              @relation("pubDocs")
   docVersions          DocVersion[]
   personalAccessTokens PersonalAccessToken[]
+  comments             DocComment[]
 }
 
 enum PersonalAccessTokenScope {
@@ -163,6 +165,7 @@ model ShareRelation {
   userId     String
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+  expiresAt  DateTime?
   doc        Doc        @relation(fields: [docId], references: [id], onDelete: Cascade)
   author     User       @relation(fields: [authorId], references: [id], name: "myShares")
   user       User       @relation(fields: [userId], references: [id], name: "shareRelations")
@@ -170,6 +173,22 @@ model ShareRelation {
   noticeType NoticeType @default(NEW)
 
   @@unique([docId, userId])
+  @@index([expiresAt])
+}
+
+model DocComment {
+  id         String    @id @default(cuid())
+  docId      String
+  userId     String
+  body       String    @db.VarChar(4000)
+  anchor     Json?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  doc        Doc       @relation(fields: [docId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([docId, createdAt(sort: Desc)])
 }
 
 enum AccessType {

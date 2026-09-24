@@ -17,13 +17,31 @@ function isUniqueConstraintError(error: unknown) {
   )
 }
 
+const MAX_SHARE_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
 const createShareRelationSchema = z
   .object({
     email: z.string().trim().toLowerCase().email(),
     access: z.enum(['READ', 'WRITE']),
     docId: z.string().min(1),
+    expiresAt: z.string().min(1).optional(),
   })
   .strict()
+
+function parseShareExpiry(value: string | undefined, now = new Date()) {
+  if (value == null) return null
+  const expiry = new Date(value)
+  if (Number.isNaN(expiry.getTime())) {
+    throw new Error('invalid-expiry')
+  }
+  if (expiry.getTime() <= now.getTime()) {
+    throw new Error('past-expiry')
+  }
+  if (expiry.getTime() - now.getTime() > MAX_SHARE_TTL_MS) {
+    throw new Error('ttl-expiry')
+  }
+  return expiry
+}
 
 const deleteShareRelationSchema = z
   .object({
@@ -38,6 +56,13 @@ const acknowledgeShareRelationSchema = z
   })
   .strict()
 
+const extendShareRelationSchema = z
+  .object({
+    id: z.string().min(1),
+    expiresAt: z.string().min(1),
+  })
+  .strict()
+
 // create doc share relation
 export async function POST(request: Request) {
   const user = await getUserInfo()
@@ -48,6 +73,12 @@ export async function POST(request: Request) {
   )
   if (!parsed.success) return Response.json(genErrorData('Share payload invalid'))
   const { email, access, docId } = parsed.data
+  let expiresAt: Date | null = null
+  try {
+    expiresAt = parseShareExpiry(parsed.data.expiresAt)
+  } catch {
+    return Response.json(genErrorData('Share payload invalid'))
+  }
 
   const documentAccess = await getDocumentAccess(docId, user.id || '')
   if (documentAccess !== DOCUMENT_ACCESS.OWNER) {
@@ -92,6 +123,7 @@ export async function POST(request: Request) {
         userId: userByEmail.id,
         access,
         noticeType: 'NEW',
+        expiresAt,
       },
     })
 
@@ -181,27 +213,53 @@ export async function PATCH(request: Request) {
   const user = await getUserInfo()
   if (user == null) return Response.json(genUnAuthData())
 
-  const parsed = acknowledgeShareRelationSchema.safeParse(
-    await readJsonBody(request, MAX_SHARE_REQUEST_BYTES).catch(() => null)
-  )
-  if (!parsed.success) return Response.json(genErrorData('Update share payload invalid'))
+  const body = await readJsonBody(request, MAX_SHARE_REQUEST_BYTES).catch(() => null)
+  const acknowledged = acknowledgeShareRelationSchema.safeParse(body)
+  if (acknowledged.success) {
+    try {
+      const result = await db.shareRelation.updateMany({
+        where: {
+          id: acknowledged.data.id,
+          userId: user.id,
+        },
+        data: {
+          noticeType: acknowledged.data.noticeType,
+        },
+      })
+      if (result.count !== 1) {
+        return Response.json(genErrorData('Share relation not found'))
+      }
+      return Response.json(genSuccessData())
+    } catch (err) {
+      console.log('Update share relation error ', err)
+      return Response.json(genErrorData('Something went wrong, try again please.'))
+    }
+  }
+
+  const extended = extendShareRelationSchema.safeParse(body)
+  if (!extended.success) return Response.json(genErrorData('Update share payload invalid'))
+  let expiresAt: Date | null = null
+  try {
+    expiresAt = parseShareExpiry(extended.data.expiresAt)
+  } catch {
+    return Response.json(genErrorData('Share payload invalid'))
+  }
 
   try {
     const result = await db.shareRelation.updateMany({
       where: {
-        id: parsed.data.id,
-        userId: user.id,
+        id: extended.data.id,
+        authorId: user.id,
+        doc: { userId: user.id },
       },
-      data: {
-        noticeType: parsed.data.noticeType,
-      },
+      data: { expiresAt },
     })
     if (result.count !== 1) {
       return Response.json(genErrorData('Share relation not found'))
     }
-    return Response.json(genSuccessData())
+    return Response.json(genSuccessData({ expiresAt }))
   } catch (err) {
-    console.log('Update share relation error ', err)
+    console.log('Extend share relation error ', err)
     return Response.json(genErrorData('Something went wrong, try again please.'))
   }
 }

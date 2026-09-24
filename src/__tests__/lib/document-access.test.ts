@@ -100,7 +100,10 @@ describe('document access', () => {
       select: {
         userId: true,
         shareRelations: {
-          where: { userId: 'reader' },
+          where: {
+            userId: 'reader',
+            OR: [{ expiresAt: null }, { expiresAt: { gt: expect.any(Date) } }],
+          },
           select: { access: true, authorId: true },
         },
       },

@@ -242,7 +242,9 @@
     "newShare": "新建分享",
     "copyLink": "复制链接",
     "copy": "复制",
-    "copied": "已复制"
+    "copied": "已复制",
+    "expiresAt": "过期时间（可选，最长 30 天）",
+    "expires": "{time} 过期"
   },
   "pubDoc": {
     "publish": "发布",

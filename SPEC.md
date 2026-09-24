@@ -84,7 +84,8 @@ each attempt retains its own recovery snapshot.
 
 - Browser IndexedDB disconnect/reconnect and access-regrant behavior needs automated integration
   coverage.
-- API v1 does not yet replace existing content, delete/restore, manage versions, or publish.
+- API v1 does not yet replace existing content, delete/restore, or publish.
+- API v1 version list/get and document comments are available as read/review surfaces.
 - Object storage is coupled to an OSS client and needs a provider interface.
 - CLI version restore, publish, and workspace import/export remain deferred.
 - Production deployments need reviewed Prisma migrations instead of `db push`.

@@ -190,33 +190,130 @@ export async function mutateDocumentContent(
 
 // --- Version listing ---
 
-export async function listDocumentVersions(userId: string, docId: string, params: URLSearchParams) {
-  // Verify access
+function encodeVersionCursor(cursor: { createdAt: string; id: string }) {
+  return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url')
+}
+
+function decodeVersionCursor(value: string) {
+  try {
+    const decoded = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as Record<string, unknown>
+    if (typeof decoded.createdAt !== 'string' || typeof decoded.id !== 'string' || !decoded.id) {
+      throw new Error('invalid')
+    }
+    return { createdAt: new Date(decoded.createdAt).toISOString(), id: decoded.id }
+  } catch {
+    throw new ApiV1Error(400, 'invalid_cursor', 'Cursor is invalid')
+  }
+}
+
+async function requireReadableDocument(userId: string, docId: string) {
   const doc = await db.doc.findFirst({
-    where: { id: docId, userId, isDeleted: false },
-    select: { id: true },
+    where: { id: docId, isDeleted: false },
+    select: {
+      id: true,
+      userId: true,
+      shareRelations: {
+        where: {
+          userId,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+        select: { access: true, authorId: true },
+      },
+    },
   })
   if (!doc) throw new ApiV1Error(404, 'document_not_found', 'Document not found')
+  const relation = doc.shareRelations.find((candidate) => candidate.authorId === doc.userId)
+  const allowed = doc.userId === userId || relation?.access === 'WRITE' || relation?.access === 'READ'
+  if (!allowed) throw new ApiV1Error(404, 'document_not_found', 'Document not found')
+  return doc
+}
 
-  const limit = Math.min(Math.max(Number(params.get('limit')) || 20, 1), 100)
+export async function listDocumentVersions(userId: string, docId: string, params: URLSearchParams) {
+  await requireReadableDocument(userId, docId)
+
+  const rawLimit = params.get('limit')
+  if (rawLimit != null && !/^\d+$/.test(rawLimit)) {
+    throw new ApiV1Error(400, 'invalid_query', 'limit must be an integer')
+  }
+  const limit = Math.min(Math.max(Number(rawLimit) || 20, 1), 100)
+  const cursorValue = params.get('cursor')
+  const cursor = cursorValue ? decodeVersionCursor(cursorValue) : null
 
   const versions = await db.docVersion.findMany({
-    where: { docId, userId },
+    where: {
+      docId,
+      ...(cursor
+        ? {
+            OR: [
+              { createdAt: { lt: new Date(cursor.createdAt) } },
+              { createdAt: new Date(cursor.createdAt), id: { lt: cursor.id } },
+            ],
+          }
+        : {}),
+    },
     select: {
       id: true,
       title: true,
       createdAt: true,
+      userId: true,
     },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit + 1,
   })
 
+  const page = versions.slice(0, limit)
+  const last = page[page.length - 1]
   return {
-    versions: versions.map((v) => ({
+    versions: page.map((v) => ({
       id: v.id,
       title: v.title,
+      authorId: v.userId,
+      kind: 'snapshot' as const,
       createdAt: v.createdAt.toISOString(),
     })),
+    nextCursor:
+      versions.length > limit && last
+        ? encodeVersionCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+        : null,
+  }
+}
+
+export async function getDocumentVersion(userId: string, docId: string, versionId: string) {
+  await requireReadableDocument(userId, docId)
+  const version = await db.docVersion.findFirst({
+    where: { id: versionId, docId },
+    select: {
+      id: true,
+      title: true,
+      createdAt: true,
+      userId: true,
+      content: true,
+    },
+  })
+  if (!version) throw new ApiV1Error(404, 'version_not_found', 'Version not found')
+
+  let content: unknown
+  try {
+    content = JSON.parse(version.content)
+  } catch {
+    throw new ApiV1Error(500, 'invalid_stored_content', 'Stored version content is not valid JSON')
+  }
+  if (
+    content == null ||
+    Array.isArray(content) ||
+    typeof content !== 'object' ||
+    (content as { type?: unknown }).type !== 'doc'
+  ) {
+    throw new ApiV1Error(500, 'invalid_stored_content', 'Stored version content is not valid JSON')
+  }
+
+  return {
+    id: version.id,
+    title: version.title,
+    authorId: version.userId,
+    kind: 'snapshot' as const,
+    createdAt: version.createdAt.toISOString(),
+    content,
   }
 }
 

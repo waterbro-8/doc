@@ -242,7 +242,9 @@
     "write": "Write",
     "copyLink": "Copy link",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "expiresAt": "Expires (optional, max 30 days)",
+    "expires": "Expires {time}"
   },
   "pubDoc": {
     "publish": "Publish",

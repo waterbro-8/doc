@@ -59,6 +59,35 @@ describe('/api/doc/share-relation permissions', () => {
     mocks.notifyCollaborationAccessRevoked.mockResolvedValue(true)
   })
 
+  it('rejects past or invalid expiresAt before database access', async () => {
+    const past = await POST(
+      jsonRequest('POST', {
+        email: 'reader@example.com',
+        access: 'READ',
+        docId: 'doc-1',
+        expiresAt: '2000-01-01T00:00:00.000Z',
+      })
+    )
+    await expect(past.json()).resolves.toEqual({
+      errno: -1,
+      msg: 'Share payload invalid',
+    })
+
+    const invalid = await POST(
+      jsonRequest('POST', {
+        email: 'reader@example.com',
+        access: 'READ',
+        docId: 'doc-1',
+        expiresAt: 'not-a-date',
+      })
+    )
+    await expect(invalid.json()).resolves.toEqual({
+      errno: -1,
+      msg: 'Share payload invalid',
+    })
+    expect(mocks.docFindFirst).not.toHaveBeenCalled()
+  })
+
   it('strictly rejects undeclared create fields', async () => {
     const response = await POST(
       jsonRequest('POST', {
@@ -197,6 +226,7 @@ describe('/api/doc/share-relation permissions', () => {
         userId: 'reader',
         access: 'READ',
         noticeType: 'NEW',
+        expiresAt: null,
       },
     })
   })

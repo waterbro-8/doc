@@ -220,7 +220,10 @@ export async function listApiDocuments(userId: string, searchParams: URLSearchPa
       ...documentMetadataSelect,
       userId: true,
       shareRelations: {
-        where: { userId },
+        where: {
+          userId,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
         select: { access: true, authorId: true },
       },
     },
@@ -273,7 +276,10 @@ export async function getApiDocument(userId: string, id: string) {
       userId: true,
       content: true,
       shareRelations: {
-        where: { userId },
+        where: {
+          userId,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
         select: { access: true, authorId: true },
       },
     },

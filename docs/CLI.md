@@ -81,6 +81,15 @@ doc get <id> --content-only
 doc create --title "Agent notes"
 doc create --title "Child" --parent <parent-id> --content-file content.json
 doc create --title "From stdin" --content-file - < content.json
+doc create --title "From markdown" --markdown-file notes.md
+
+# Read-only version history. Restore remains in the UI.
+doc versions <id>
+doc versions get <id> <versionId>
+
+# Comments never rewrite document content.
+doc comments <id>
+doc comments add <id> --body "Please check the rollback steps"
 
 # Updates are metadata-only in this release.
 doc update <id> --title "New title" --if-match '"doc:..."'
@@ -88,8 +97,10 @@ doc update <id> --icon "📘" --star --if-match '"doc:..."'
 doc update <id> --clear-icon --unstar --force
 ```
 
-`--content-file` accepts a TipTap document object whose root has `"type": "doc"`. Markdown, HTML,
-and arbitrary plain text are not silently converted. Input is limited to 1,000,000 bytes.
+`--content-file` accepts a TipTap document object whose root has `"type": "doc"`. Markdown is not
+sniffed on that path. `--markdown-file` converts a bounded CommonMark subset (headings, paragraphs,
+lists, tasks, fenced code, http/https/mailto links) and rejects raw HTML, images, tables, and
+`javascript:` URLs. Input is limited to 1,000,000 bytes.
 
 `doc update` requires at least one of `--title`, `--icon`, `--clear-icon`, `--star`, or `--unstar`.
 It also requires the ETag returned by `doc get` through `--if-match`, or an explicit `--force`.

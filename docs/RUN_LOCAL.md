@@ -32,6 +32,9 @@ To rotate all three values while preserving non-secret settings, run
 
 No external identity, mail, or AI credential is required for the local path. GitHub, Resend,
 external SMTP, object storage, and AI values stay optional until the related feature is used.
+To enable AI continue/chat against any OpenAI-compatible endpoint, set `DOC_AI_BASE_URL` and
+`DOC_AI_API_KEY` (optional `DOC_AI_MODEL` / `DOC_AI_NAME`). DeepSeek and DeepBricks presets still
+work when only those keys are set. Missing AI config sends no traffic.
 
 ## 2. Install and start dependencies
 

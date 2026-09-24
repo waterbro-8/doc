@@ -21,7 +21,8 @@ import {
 } from './config.js'
 import { checkDockerReadiness } from './docker-readiness.js'
 import { runDoctor } from './doctor.js'
-import { InputError, readDocumentInput, readSecretToken } from './input.js'
+import { InputError, readDocumentInput, readMarkdownInput, readSecretToken } from './input.js'
+import { markdownToTiptap } from './markdown-to-tiptap.js'
 import { createProcessRunner } from './process.js'
 import {
   exists,
@@ -55,8 +56,10 @@ const JSON_COMMANDS = new Set([
   'status',
   'update',
   'version',
+  'versions',
+  'comments',
 ])
-const REMOTE_COMMANDS = new Set(['auth', 'create', 'get', 'ls', 'update'])
+const REMOTE_COMMANDS = new Set(['auth', 'create', 'get', 'ls', 'update', 'versions', 'comments'])
 const CONFIGURATION_API_ERRORS = new Set(['insecure_api_url', 'invalid_api_url'])
 const CONTROL_COMPOSE_ENV = {
   AUTH_SECRET: 'doc-control-command-only',
@@ -154,6 +157,8 @@ Commands:
   get <id>              Get one document through the authenticated API
   create                Create a document through the authenticated API
   update <id>           Update document metadata through the authenticated API
+  versions              List or get document versions through the authenticated API
+  comments              List or create document comments through the authenticated API
   capabilities          List delivered and experimental product capabilities
   init                  Create or safely merge private environment files
   doctor                Check local dependencies, configuration, and optional live services
@@ -194,9 +199,20 @@ List documents from /api/v1/documents. This command does not require a local che
   get: `Usage: doc get <id> [--content-only] [--json]
 
 Get a document accessible to the authenticated principal.`,
-  create: `Usage: doc create --title <title> [--parent <id>] [--content-file <path|->] [--json]
+  create: `Usage: doc create --title <title> [--parent <id>] [--content-file <path|-> | --markdown-file <path|->] [--json]
 
-Create a document. --content-file accepts TipTap JSON only; use - to read stdin.`,
+Create a document. --content-file accepts TipTap JSON only. --markdown-file converts a bounded
+CommonMark subset (headings, paragraphs, lists, tasks, fenced code, links). They are mutually exclusive.`,
+  versions: `Usage:
+  doc versions <id> [--limit <1-100>] [--cursor <cursor>] [--json]
+  doc versions get <id> <versionId> [--json]
+
+List or get document versions. Restore remains a UI/collaboration action.`,
+  comments: `Usage:
+  doc comments <id> [--include-resolved] [--json]
+  doc comments add <id> --body <text> [--json]
+
+List or create document comments. Comments never rewrite document content.`,
   update: `Usage: doc update <id> [--title <title>] [--icon <icon> | --clear-icon]
                      [--star | --unstar] [--if-match <etag> | --force] [--json]
 
@@ -686,12 +702,20 @@ async function handleRemoteCommand({
       title: 'value',
       parent: 'value',
       'content-file': 'value-or-stdin',
+      'markdown-file': 'value-or-stdin',
     })
     ensureNoPositionals(positionals, command)
     if (!flags.title) throw new UsageError('create requires --title <title>')
+    if (flags['content-file'] && flags['markdown-file']) {
+      throw new UsageError('--content-file and --markdown-file are mutually exclusive')
+    }
     const body = { title: validateTitle(flags.title) }
     if (flags.parent) body.parentId = validateDocumentId(flags.parent)
     if (flags['content-file']) body.content = await readDocumentInput(flags['content-file'], cwd, stdin)
+    if (flags['markdown-file']) {
+      const markdown = await readMarkdownInput(flags['markdown-file'], cwd, stdin)
+      body.content = markdownToTiptap(markdown)
+    }
     operation = async (client) => {
       const result = await client.create(body)
       const document = assertDocument(result.payload.data, { requireContent: true })
@@ -700,6 +724,108 @@ async function handleRemoteCommand({
         write(stdout, JSON.stringify(singleDocumentJson(document, etag), null, 2))
       } else {
         writeDocumentText(stdout, 'created', document, etag)
+      }
+    }
+  }
+
+  if (command === 'versions') {
+    const { flags, positionals } = parseCommandOptions(commandArgs, {
+      limit: 'value',
+      cursor: 'value',
+    })
+    if (positionals[0] === 'get') {
+      if (positionals.length !== 3) throw new UsageError('versions get requires a document id and a version id')
+      const documentId = validateDocumentId(positionals[1])
+      const versionId = validateDocumentId(positionals[2])
+      operation = async (client) => {
+        const result = await client.getVersion(documentId, versionId)
+        const version = result.payload.data
+        if (globalOptions.json) {
+          write(stdout, JSON.stringify({ schemaVersion: 1, version }, null, 2))
+        } else {
+          write(stdout, `id: ${terminalText(version.id)}`)
+          write(stdout, `title: ${compactText(version.title)}`)
+          write(stdout, `author: ${terminalText(version.authorId)}`)
+          write(stdout, `created: ${terminalText(version.createdAt)}`)
+          write(stdout, 'content:')
+          write(stdout, JSON.stringify(version.content, null, 2))
+        }
+      }
+    } else {
+      if (positionals.length !== 1) throw new UsageError('versions requires exactly one document id')
+      if (flags.limit && (!/^\d+$/.test(flags.limit) || Number(flags.limit) < 1 || Number(flags.limit) > 100)) {
+        throw new UsageError('--limit must be an integer between 1 and 100')
+      }
+      const id = validateDocumentId(positionals[0])
+      operation = async (client) => {
+        const result = await client.listVersions(id, {
+          limit: flags.limit && Number(flags.limit),
+          cursor: flags.cursor,
+        })
+        const versions = result.payload.data
+        const meta = result.payload.meta || { nextCursor: null }
+        if (!Array.isArray(versions)) {
+          throw new ApiClientError('API returned an invalid version list', { code: 'invalid_api_response' })
+        }
+        if (globalOptions.json) {
+          write(stdout, JSON.stringify({ schemaVersion: 1, versions, meta }, null, 2))
+        } else if (versions.length === 0) {
+          write(stdout, 'No versions.')
+        } else {
+          write(stdout, 'ID\tCREATED\tAUTHOR\tTITLE')
+          for (const version of versions) {
+            write(
+              stdout,
+              `${terminalText(version.id)}\t${terminalText(version.createdAt)}\t${terminalText(version.authorId)}\t${compactText(version.title)}`
+            )
+          }
+          if (meta.nextCursor) write(stdout, `next cursor: ${terminalText(meta.nextCursor)}`)
+        }
+      }
+    }
+  }
+
+  if (command === 'comments') {
+    const { flags, positionals } = parseCommandOptions(commandArgs, {
+      body: 'value',
+      'include-resolved': 'boolean',
+    })
+    if (positionals[0] === 'add') {
+      if (positionals.length !== 2) throw new UsageError('comments add requires a document id')
+      if (!flags.body || !flags.body.trim()) throw new UsageError('comments add requires --body <text>')
+      if (flags.body.length > 4000) throw new UsageError('--body must not exceed 4000 characters')
+      const id = validateDocumentId(positionals[1])
+      operation = async (client) => {
+        const result = await client.createComment(id, { body: flags.body })
+        const comment = result.payload.data
+        if (globalOptions.json) {
+          write(stdout, JSON.stringify({ schemaVersion: 1, comment }, null, 2))
+        } else {
+          write(stdout, `created ${terminalText(comment.id)}`)
+        }
+      }
+    } else {
+      if (positionals.length !== 1) throw new UsageError('comments requires exactly one document id')
+      const id = validateDocumentId(positionals[0])
+      operation = async (client) => {
+        const result = await client.listComments(id, { includeResolved: flags['include-resolved'] })
+        const comments = result.payload.data
+        if (!Array.isArray(comments)) {
+          throw new ApiClientError('API returned an invalid comment list', { code: 'invalid_api_response' })
+        }
+        if (globalOptions.json) {
+          write(stdout, JSON.stringify({ schemaVersion: 1, comments }, null, 2))
+        } else if (comments.length === 0) {
+          write(stdout, 'No comments.')
+        } else {
+          for (const comment of comments) {
+            const resolved = comment.resolvedAt ? ' resolved' : ''
+            write(
+              stdout,
+              `${terminalText(comment.id)}\t${terminalText(comment.authorId)}${resolved}\t${compactText(comment.body)}`
+            )
+          }
+        }
       }
     }
   }

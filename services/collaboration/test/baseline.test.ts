@@ -114,6 +114,7 @@ describe('typed collaboration behavior baseline', () => {
         }
         expect(sql).toContain('relation."authorId" = doc."userId"')
         expect(sql).toContain('doc."isDeleted" = false')
+        expect(sql).toContain('relation."expiresAt"')
         expect(boundaryChange === 'soft-delete' || boundaryChange === 'owner-transfer').toBe(true)
         return { rowCount: 0, rows: [] }
       })

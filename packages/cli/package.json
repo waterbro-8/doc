@@ -14,7 +14,7 @@
     "README.md"
   ],
   "scripts": {
-    "check": "node --check bin/doc.js && node --check src/api-client.js && node --check src/auth-config.js && node --check src/capabilities.js && node --check src/cli.js && node --check src/compose.js && node --check src/config.js && node --check src/docker-readiness.js && node --check src/doctor.js && node --check src/input.js && node --check src/process.js && node --check src/project.js && node --check ../../scripts/verify-local-loop.mjs",
+    "check": "node --check bin/doc.js && node --check src/api-client.js && node --check src/auth-config.js && node --check src/capabilities.js && node --check src/cli.js && node --check src/compose.js && node --check src/config.js && node --check src/docker-readiness.js && node --check src/doctor.js && node --check src/input.js && node --check src/markdown-to-tiptap.js && node --check src/process.js && node --check src/project.js && node --check ../../scripts/verify-local-loop.mjs",
     "test": "node --test"
   },
   "engines": {

@@ -31,6 +31,18 @@ export function resolveDocumentAccess(record: DocumentAccessRecord | null, userI
   return DOCUMENT_ACCESS.NONE
 }
 
+export function activeShareWhere(now = new Date()) {
+  return {
+    OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+  }
+}
+
+export function isShareExpired(expiresAt: Date | string | null | undefined, now = new Date()) {
+  if (expiresAt == null) return false
+  const expiry = expiresAt instanceof Date ? expiresAt : new Date(expiresAt)
+  return Number.isNaN(expiry.getTime()) || expiry.getTime() <= now.getTime()
+}
+
 export async function getDocumentAccess(docId: string, userId: string): Promise<DocumentAccess> {
   if (!docId || !userId) return DOCUMENT_ACCESS.NONE
 
@@ -42,7 +54,10 @@ export async function getDocumentAccess(docId: string, userId: string): Promise<
     select: {
       userId: true,
       shareRelations: {
-        where: { userId },
+        where: {
+          userId,
+          ...activeShareWhere(),
+        },
         select: { access: true, authorId: true },
       },
     },

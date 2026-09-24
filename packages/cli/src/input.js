@@ -21,26 +21,32 @@ export async function readStreamWithLimit(stream, maximumBytes) {
   return Buffer.concat(chunks).toString('utf8')
 }
 
-export async function readDocumentInput(path, cwd, stdin) {
-  let content
+async function readLimitedFile(path, cwd, stdin) {
   if (path === '-') {
-    content = await readStreamWithLimit(stdin, MAX_DOCUMENT_INPUT_BYTES)
-  } else {
-    const absolutePath = resolve(cwd, path)
-    let file
-    try {
-      file = await open(absolutePath, 'r')
-      const fileStat = await file.stat()
-      if (!fileStat.isFile()) throw new InputError(`Document input is not a regular file: ${absolutePath}`)
-      if (fileStat.size > MAX_DOCUMENT_INPUT_BYTES) throw inputSizeError(MAX_DOCUMENT_INPUT_BYTES)
-      content = await readStreamWithLimit(file.createReadStream({ autoClose: false }), MAX_DOCUMENT_INPUT_BYTES)
-    } catch (error) {
-      if (error instanceof InputError) throw error
-      throw new InputError(`Unable to read document input: ${absolutePath}`)
-    } finally {
-      await file?.close()
-    }
+    return readStreamWithLimit(stdin, MAX_DOCUMENT_INPUT_BYTES)
   }
+  const absolutePath = resolve(cwd, path)
+  let file
+  try {
+    file = await open(absolutePath, 'r')
+    const fileStat = await file.stat()
+    if (!fileStat.isFile()) throw new InputError(`Document input is not a regular file: ${absolutePath}`)
+    if (fileStat.size > MAX_DOCUMENT_INPUT_BYTES) throw inputSizeError(MAX_DOCUMENT_INPUT_BYTES)
+    return await readStreamWithLimit(file.createReadStream({ autoClose: false }), MAX_DOCUMENT_INPUT_BYTES)
+  } catch (error) {
+    if (error instanceof InputError) throw error
+    throw new InputError(`Unable to read document input: ${absolutePath}`)
+  } finally {
+    await file?.close()
+  }
+}
+
+export async function readMarkdownInput(path, cwd, stdin) {
+  return readLimitedFile(path, cwd, stdin)
+}
+
+export async function readDocumentInput(path, cwd, stdin) {
+  const content = await readLimitedFile(path, cwd, stdin)
 
   let value
   try {

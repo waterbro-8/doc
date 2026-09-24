@@ -25,6 +25,7 @@ export interface IShareRelation {
   user?: IShareRelationUser
   access: string
   noticeType: string
+  expiresAt?: string | null
 }
 
 interface IShareRelationState {

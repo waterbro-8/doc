@@ -28,7 +28,7 @@ export const capabilityGroups = [
         name: 'Document sharing',
         status: 'experimental',
         detail:
-          'Owner-scoped, database-unique read/write relations and notifications exist; active WebSocket revocation remains.',
+          'Owner-scoped, database-unique read/write relations with optional expiry; expired grants fail closed on the next collaboration check.',
       },
       {
         id: 'publishing',
@@ -99,7 +99,7 @@ export const capabilityGroups = [
         name: 'Document API v1',
         status: 'available',
         detail:
-          'Bearer-only token inspection, owner listing, authorized reads, canonical creation, and ETag-guarded metadata updates.',
+          'Bearer-only token inspection, owner listing, authorized reads, canonical creation, ETag-guarded metadata updates, version list/get, and comments.',
       },
       {
         id: 'document-authorization',

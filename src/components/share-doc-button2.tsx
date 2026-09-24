@@ -61,6 +61,7 @@ export default function ShareDocButton(props: IProps) {
   // add relation
   const [email, setEmail] = useState('')
   const [access, setAccess] = useState('')
+  const [expiresAt, setExpiresAt] = useState('')
   const [addLoading, setAddTransition] = useTransition()
   const addMyShareRelation = useShareStore((s) => s.addMyShareRelation)
   const userInfo = useUserStore((s) => s.userInfo)
@@ -81,7 +82,12 @@ export default function ShareDocButton(props: IProps) {
     }
 
     const url = '/api/doc/share-relation'
-    const res = await post(url, { email, access, docId: id })
+    const res = await post(url, {
+      email,
+      access,
+      docId: id,
+      ...(expiresAt ? { expiresAt: new Date(expiresAt).toISOString() } : {}),
+    })
     if (res.errno !== 0) {
       toast({ variant: 'destructive', description: res.msg })
       return
@@ -95,6 +101,7 @@ export default function ShareDocButton(props: IProps) {
     })
     setEmail('')
     setAccess('')
+    setExpiresAt('')
   }
   function addRelationHandler() {
     if (email.trim() === '') return
@@ -146,6 +153,11 @@ export default function ShareDocButton(props: IProps) {
                   <p className="text-sm w-52 text-ellipsis overflow-hidden">{i.user?.name || i.user?.email}</p>
                 </div>
                 <Badge variant={i.access === 'WRITE' ? 'outline' : 'secondary'}>{i.access}</Badge>
+                {i.expiresAt ? (
+                  <span className="ml-2 text-xs text-foreground-muted">
+                    {t('expires', { time: new Date(i.expiresAt).toISOString() })}
+                  </span>
+                ) : null}
                 <button
                   type="button"
                   aria-label={`${t('confirmRemove')} ${i.user?.name || i.user?.email || ''}`}
@@ -191,6 +203,14 @@ export default function ShareDocButton(props: IProps) {
                 {t('share')}
               </Button>
             </div>
+            <Input
+              data-testid="share-new-expiry-input"
+              type="datetime-local"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              className="mt-2 h-8"
+              aria-label={t('expiresAt')}
+            />
           </div>
           <div className="mt-4">
             <p className="text-sm font-bold text-foreground-muted">{t('copyLink')}</p>

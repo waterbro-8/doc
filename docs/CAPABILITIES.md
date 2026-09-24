@@ -14,8 +14,9 @@ automation.
 | Document tree      | available    | Create, rename, duplicate, move, sort, favorite, search, trash, restore, and permanent cleanup                          |
 | Rich-text editing  | available    | Tiptap headings, lists, tasks, tables, columns, images, links, code, Mermaid, slash commands, outline, and find/replace |
 | Templates          | available    | Todo, résumé, and project-highlight starters                                                                            |
-| Version history    | available    | JSON and Yjs snapshots, block-aware diff, current-state protection, and restore                                         |
-| Sharing            | experimental | READ/WRITE relations enforce owner/recipient boundaries and revoke matching active WebSocket connections                |
+| Version history    | available    | JSON and Yjs snapshots, block-aware diff, current-state protection, restore, and API/CLI read-only list/get              |
+| Sharing            | experimental | READ/WRITE relations enforce owner/recipient boundaries, optional expiry, and revoke matching active WebSocket connections |
+| Comments           | experimental | Attributed review comments that never rewrite document content; WRITE creates, READ lists                              |
 | Publishing         | experimental | Public links, republish/unpublish, moderation, owner checks, public reading, and allowlist HTML sanitization exist      |
 | Export and uploads | available    | Browser-side PDF export plus compressed image upload through the current OSS adapter                                    |
 
@@ -70,7 +71,7 @@ lifecycle behavior.
 | -------------------- | ------------ | ------------------------------------------------------------------------------------------------------- |
 | Writing operations   | available    | Continue, summarize, outline, brainstorm, expand, shorten, change tone, translate, and explain          |
 | Document-side chat   | available    | Streaming responses, Markdown/Mermaid rendering, insert/replace actions, and usage limits               |
-| Provider integration | experimental | DeepSeek and DeepBricks use an OpenAI-compatible adapter; provider configuration is not yet generalized |
+| Provider integration | experimental | OpenAI-compatible `DOC_AI_*` config plus DeepSeek/DeepBricks presets; unconfigured AI sends no traffic |
 
 Primary implementation paths:
 
@@ -84,7 +85,7 @@ Primary implementation paths:
 | Capability             | Status       | Current implementation                                                                                                                                                     |
 | ---------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Authentication         | available    | GitHub OAuth, email sign-in, and scoped personal access tokens with expiry, revocation, and one-time secret display                                                        |
-| Document API v1        | available    | Bearer-only token inspection, owner listing with content search, time range filters, sort options, authorized reads, canonical creation, and ETag-guarded metadata updates |
+| Document API v1        | available    | Bearer-only token inspection, owner listing with content search, time range filters, sort options, authorized reads, canonical creation, ETag-guarded metadata updates, version list/get, and comments |
 | Document authorization | experimental | Browser routes, API v1, publication, and collaboration entry points enforce persisted ownership and READ/WRITE relations                                                   |
 | User settings          | available    | User name and avatar                                                                                                                                                       |
 | Admin governance       | available    | Overview, user/admin management, document filtering, restore/delete, and publication moderation                                                                            |

@@ -5,8 +5,9 @@ document API are separate: scripts use `/api/v1`, while personal access tokens a
 revoked from the signed-in user settings page.
 
 The current v1 surface is intentionally small. It supports token inspection, owner document
-listing, document reads, document creation, and concurrency-safe metadata updates. It does not
-yet expose content replacement, delete/restore, versions, publishing, or workspace import/export.
+listing, document reads, document creation, concurrency-safe metadata updates, read-only version
+history, and document comments. It does not yet expose collaboration-aware content replacement
+as a finished contract, delete/restore, publishing, or workspace import/export.
 
 ## Authentication
 
@@ -220,6 +221,37 @@ document content.
 Content replacement is not accepted by this endpoint. It needs a collaboration-aware mutation
 path so an API write cannot diverge from an active Yjs room.
 
+### List versions
+
+```http
+GET /api/v1/documents/{id}/versions?limit=20&cursor=...
+```
+
+Owners and active READ/WRITE recipients can list snapshots. Expired shares are treated as
+absent (`404`). Default JSON does not include Yjs binaries. Follow `meta.nextCursor`.
+
+### Get one version
+
+```http
+GET /api/v1/documents/{id}/versions/{versionId}
+```
+
+Returns snapshot metadata and TipTap JSON. Missing versions return `404`. Restore remains a
+UI/collaboration action.
+
+### List and create comments
+
+```http
+GET /api/v1/documents/{id}/comments
+GET /api/v1/documents/{id}/comments?include=resolved
+POST /api/v1/documents/{id}/comments
+PATCH /api/v1/documents/{id}/comments/{commentId}
+```
+
+Comments are attributed review threads. They never rewrite document content or change the
+document ETag. WRITE (and owner) may create/resolve; READ may list. Strangers get `404`.
+Default list hides resolved comments.
+
 ## CLI mapping
 
 ```bash
@@ -228,6 +260,11 @@ doc auth status
 doc ls
 doc get <document-id>
 doc create --title "Runbook" --content-file runbook.json
+doc create --title "Runbook" --markdown-file notes.md
+doc versions <document-id>
+doc versions get <document-id> <version-id>
+doc comments <document-id>
+doc comments add <document-id> --body "Please check the rollback steps"
 doc update <document-id> --title "Production runbook" --if-match '"etag"'
 doc update <document-id> --star --force
 doc auth logout

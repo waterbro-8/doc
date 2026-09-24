@@ -1268,6 +1268,84 @@ test('create validates TipTap input before posting the exact API body', async ()
   assert.match(oversized.stderr, /exceeds 1000000 bytes/)
 })
 
+test('create converts markdown files and rejects raw HTML', async () => {
+  const inputDirectory = await mkdtemp(join(tmpdir(), 'doc-cli-md-'))
+  const markdownPath = join(inputDirectory, 'notes.md')
+  await writeFile(markdownPath, '# Runbook\n\nFirst response steps.\n')
+  const calls = []
+  const result = await invoke(
+    ['create', '--title', 'Runbook', '--markdown-file', markdownPath, '--json'],
+    {
+      cwd: tmpdir(),
+      env: { DOC_API_URL: 'https://docs.example.com', DOC_API_TOKEN: 'doc_pat_md' },
+      fetch: async (url, options) => {
+        calls.push({ url: String(url), options })
+        const body = JSON.parse(options.body)
+        return apiResponse(
+          {
+            data: {
+              ...documentDto({ id: 'md-1', title: 'Runbook' }),
+              content: body.content,
+            },
+          },
+          { status: 201, headers: { etag: '"md-1"' } }
+        )
+      },
+    }
+  )
+  assert.equal(result.code, 0)
+  const posted = JSON.parse(calls[0].options.body)
+  assert.equal(posted.content.type, 'doc')
+  assert.equal(posted.content.content[0].type, 'heading')
+
+  const html = await invoke(['create', '--title', 'Bad', '--markdown-file', '-'], {
+    cwd: tmpdir(),
+    env: { DOC_API_URL: 'https://docs.example.com', DOC_API_TOKEN: 'doc_pat_md' },
+    stdin: Readable.from(['<div>nope</div>']),
+    fetch: async () => {
+      throw new Error('must not fetch')
+    },
+  })
+  assert.equal(html.code, 2)
+  assert.match(html.stderr, /Raw HTML/)
+})
+
+test('versions lists and gets document history', async () => {
+  const listed = await invoke(['versions', 'doc-1', '--json'], {
+    cwd: tmpdir(),
+    env: { DOC_API_URL: 'https://docs.example.com', DOC_API_TOKEN: 'doc_pat_ver' },
+    fetch: async (url) => {
+      assert.match(String(url), /\/api\/v1\/documents\/doc-1\/versions$/)
+      return apiResponse({
+        data: [{ id: 'v1', title: 'Runbook', authorId: 'user-1', kind: 'snapshot', createdAt: '2026-09-24T00:00:00.000Z' }],
+        meta: { nextCursor: null },
+      })
+    },
+  })
+  assert.equal(listed.code, 0)
+  assert.equal(JSON.parse(listed.stdout).versions[0].id, 'v1')
+
+  const got = await invoke(['versions', 'get', 'doc-1', 'v1', '--json'], {
+    cwd: tmpdir(),
+    env: { DOC_API_URL: 'https://docs.example.com', DOC_API_TOKEN: 'doc_pat_ver' },
+    fetch: async (url) => {
+      assert.match(String(url), /\/api\/v1\/documents\/doc-1\/versions\/v1$/)
+      return apiResponse({
+        data: {
+          id: 'v1',
+          title: 'Runbook',
+          authorId: 'user-1',
+          kind: 'snapshot',
+          createdAt: '2026-09-24T00:00:00.000Z',
+          content: { type: 'doc', content: [] },
+        },
+      })
+    },
+  })
+  assert.equal(got.code, 0)
+  assert.equal(JSON.parse(got.stdout).version.id, 'v1')
+})
+
 test('update validates changes and sends metadata with an ETag precondition', async () => {
   const calls = []
   const options = {

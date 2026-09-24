@@ -178,15 +178,17 @@ describe('api-v1-mutations', () => {
 
   describe('listDocumentVersions', () => {
     it('returns versions for owned document', async () => {
-      mockDb.doc.findFirst.mockResolvedValue({ id: 'doc-1' } as any)
+      mockDb.doc.findFirst.mockResolvedValue({ id: 'doc-1', userId: 'user-1', shareRelations: [] } as any)
       mockDb.docVersion.findMany.mockResolvedValue([
-        { id: 'v1', title: 'T1', createdAt: new Date('2026-01-01') },
-        { id: 'v2', title: 'T2', createdAt: new Date('2026-01-02') },
+        { id: 'v1', title: 'T1', createdAt: new Date('2026-01-01'), userId: 'user-1' },
+        { id: 'v2', title: 'T2', createdAt: new Date('2026-01-02'), userId: 'user-1' },
       ] as any)
 
       const result = await listDocumentVersions('user-1', 'doc-1', new URLSearchParams())
       expect(result.versions).toHaveLength(2)
       expect(result.versions[0].id).toBe('v1')
+      expect(result.versions[0].authorId).toBe('user-1')
+      expect(result.nextCursor).toBeNull()
     })
 
     it('rejects when document not found', async () => {

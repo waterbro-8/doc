@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     instance.isError = true
     const msg = err instanceof Error ? err.message : String(err)
-    sendEmail({ subject: `AI error, key ${instance.key.slice(0, 20)}***`, text: msg })
+    sendEmail({ subject: `AI error from provider ${instance.name}`, text: msg })
     return Response.json(genErrorData(msg))
   }
 }

@@ -6,6 +6,17 @@ All notable changes to `doc` are documented here.
 
 ### Added
 
+- CLI `--markdown-file` converts a bounded CommonMark subset into TipTap JSON
+  on `doc create` and rejects raw HTML, images, tables, and `javascript:` links (#98).
+- Read-only document version list/get on `/api/v1/documents/{id}/versions` and
+  `doc versions` / `doc versions get` for owners and active share recipients (#99).
+- Optional share `expiresAt` (max 30 days). Expired READ/WRITE grants fail closed
+  in document access and collaboration SQL without a manual revoke (#100).
+- Provider-neutral OpenAI-compatible AI config via `DOC_AI_BASE_URL` /
+  `DOC_AI_API_KEY` / `DOC_AI_MODEL`. Unconfigured AI sends no traffic (#101).
+- Attributed document comments on `/api/v1/documents/{id}/comments` that never
+  rewrite body content or the document ETag (#102).
+
 - #86: Host Memory ranking abstains without a confirmed task intent. Overlay candidates drop `NONE` access via `resolveDocumentAccess`. `GET /api/v1/documents` returns list abstain copy in `meta.hostMemory`. Default advice payload never includes document bodies. Overlay does not change `shareRelations`. Refs #82.
 
 - Migrate the app to Next.js 16.3.5 / React 19.1.2: async `params` via
